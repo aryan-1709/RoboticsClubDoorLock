@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 const path = require('path');
-const keyPath = path.join('robotics-club-door-lock-592445d6ec57.json');
+const keyPath = path.join('/etc/secrets/robotics-club-door-lock-592445d6ec57.json');
 const auth = new google.auth.GoogleAuth({
     keyFile: keyPath,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
