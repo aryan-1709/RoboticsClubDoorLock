@@ -1,7 +1,10 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 const path = require('path');
-const keyPath = path.join('/etc/secrets/robotics-club-door-lock-592445d6ec57.json');
+const isRender = process.env.RENDER === 'true'; // Render sets this automatically
+const keyPath = isRender
+  ? '/etc/secrets/robotics-club-door-lock-592445d6ec57.json'
+  : path.join('etc', 'secrets', 'robotics-club-door-lock-592445d6ec57.json');
 const auth = new google.auth.GoogleAuth({
     keyFile: keyPath,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
