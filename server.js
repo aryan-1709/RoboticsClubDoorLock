@@ -3,7 +3,7 @@ require('dotenv').config(); // Loads environment variables from .env file
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const { appendEmailToSheet } = require('./sheets');
+const { appendEmailToSheet, getValueSheet, changeValueSheet } = require('./sheets');
 
 // 2. Initialize the Express app
 const app = express();
@@ -85,6 +85,7 @@ app.post('/reset', async (req, res) => {
     };
     try {
         await transporter.sendMail(mailOptions);
+
         await appendEmailToSheet(user);
         console.log('Email sent and logged!');
         res.status(200).send(password);
@@ -98,8 +99,36 @@ app.get('/get', (req, res) => {
     res.send("Hello World!");
 });
 
-app.get('/current', (req, res) => {
-    res.send("Current status: OK");
+// Error fetching current password: ReferenceError: getCurrentPasswordFromSheet is not defined how to fix
+app.post('/update', async (req, res) => {
+    const { adminPass } = req.body;
+    const CurrentAdminPass=await getValueSheet(1,2);
+    if (adminPass != CurrentAdminPass) {
+        return res.status(400).send('Wrong');
+    }
+    try {
+        const currentPassword = await getValueSheet(0,2);
+        console.log('Current password fetched successfully:', currentPassword);
+        res.status(200).send(currentPassword);
+    } catch (error) {
+        console.error('Error fetching current password:', error);
+        res.status(500).send('Error fetching current password.');
+    }
+});
+
+app.post('/changepassword', async (req, res) => {
+    const {newPassword} = req.body;
+    if (!newPassword) {
+        return res.status(400).send('Missing required fields: {newPassword}');
+    }
+    try {
+        await changeValueSheet(0, 2, newPassword);
+        console.log('Password updated successfully');
+        res.status(200).send('Password updated successfully');
+    } catch (error) {
+        console.error('Error updating password:', error);
+        res.status(500).send('Error updating password.');
+    }
 });
 
 // 7. Start the server
