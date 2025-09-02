@@ -3,6 +3,7 @@ require('dotenv').config(); // Loads environment variables from .env file
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
+const { appendEmailToSheet } = require('./sheets');
 
 // 2. Initialize the Express app
 const app = express();
@@ -15,34 +16,26 @@ app.use(express.json());
 // 4. Configure Nodemailer transporter
 // This object is responsible for the actual email sending
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Use 'gmail', 'hotmail', etc.
+    service: 'gmail', 
     auth: {
-        user: process.env.EMAIL_USER, // Your email from .env file
-        pass: process.env.EMAIL_PASS  // Your app password from .env file
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS  
     }
 });
 
-// 5. Create the POST endpoint '/send-mail'
 app.post('/send', async (req, res) => {
-    // Destructure the recipient, subject, and text from the request body
     console.log(req.body);
     const { to, subject, text } = req.body;
 
-    // Basic validation: ensure all required fields are present
     if (!to || !subject || !text) {
         return res.status(400).send('Missing required fields: to, subject, text');
     }
-
-    // Define the email options
     const mailOptions = {
-        from: `"Your App Name" <${process.env.EMAIL_USER}>`, // Sender address
-        to: to,               // List of receivers
-        subject: subject,     // Subject line
-        text: text            // Plain text body
-        // You can also add an html property for HTML emails: html: "<b>Hello world?</b>"
+        from: `"Your App Name" <${process.env.EMAIL_USER}>`,
+        to: to,              
+        subject: subject,    
+        text: text            
     };
-
-    // 6. Send the email using a try-catch block for error handling
     try {
         await transporter.sendMail(mailOptions);
         console.log('Email sent successfully!');
@@ -53,8 +46,60 @@ app.post('/send', async (req, res) => {
     }
 });
 
+app.post('/verify', async (req, res) => {
+    const {to} = req.body;
+    if (!to) {
+        return res.status(400).send('Missing required fields: {to}');
+    }
+    const subject = "Email Verification - Admin Robotics Club";
+    const code = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
+    const text = `The verification code for your email is: ${code}.\n\nIf you did not request this code, please ignore this email.`;
+    const mailOptions = {
+        from: `"Admin Robotics Club" <${process.env.EMAIL_USER}>`,
+        to: to,               
+        subject: subject,     
+        text: text           
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Verification code sent successfully!');
+        // change this afterwards
+        res.status(200).send(code);
+    } catch (error) {
+        console.error('Error sending email:', error);
+        res.status(500).send('Error sending email.');
+    }
+});
+
+app.post('/reset', async (req, res) => {
+    const {user} = req.body;
+    const password = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
+    const subject = "Password Reset Robotics Club Door";
+    const text = `New password for robotics club door is : ${password}`;
+    const mailOptions = {
+        from: `"Admin Robotics Club" <${process.env.EMAIL_USER}>`, 
+        to: process.env.EMAIL_USER,              
+        subject: subject,     
+        text: text
+    };
+    try {
+        await transporter.sendMail(mailOptions);
+        await appendEmailToSheet(user);
+        console.log('Email sent and logged!');
+        res.status(200).send(password);
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).send('Error sending email or logging to sheet.');
+    }
+});
+
 app.get('/get', (req, res) => {
     res.send("Hello World!");
+});
+
+app.get('/current', (req, res) => {
+    res.send("Current status: OK");
 });
 
 // 7. Start the server
