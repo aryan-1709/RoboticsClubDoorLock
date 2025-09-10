@@ -1,20 +1,15 @@
-// 1. Import necessary packages
-require('dotenv').config(); // Loads environment variables from .env file
+require('dotenv').config(); 
 const express = require('express');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const { appendEmailToSheet, getValueSheet, changeValueSheet } = require('./sheets');
 
-// 2. Initialize the Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 3. Add middleware to parse JSON request bodies
-app.use(cors()); // Enable CORS for all routes
+app.use(cors());
 app.use(express.json());
 
-// 4. Configure Nodemailer transporter
-// This object is responsible for the actual email sending
 const transporter = nodemailer.createTransport({
     service: 'gmail', 
     auth: {
@@ -64,7 +59,6 @@ app.post('/verify', async (req, res) => {
     try {
         await transporter.sendMail(mailOptions);
         console.log('Verification code sent successfully!');
-        // change this afterwards
         res.status(200).send(code);
     } catch (error) {
         console.error('Error sending email:', error);
@@ -99,7 +93,6 @@ app.get('/get', (req, res) => {
     res.send("Hello World!");
 });
 
-// Error fetching current password: ReferenceError: getCurrentPasswordFromSheet is not defined how to fix
 app.post('/update', async (req, res) => {
     const { adminPass } = req.body;
     const CurrentAdminPass=await getValueSheet(1,2);
@@ -131,7 +124,6 @@ app.post('/changepassword', async (req, res) => {
     }
 });
 
-// 7. Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
