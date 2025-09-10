@@ -4,9 +4,13 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require("fs");
 const isRender = process.env.RENDER === 'true';
+// const keyPath = isRender
+//   ? '/etc/secrets/robotics-club-door-lock-592445d6ec57.json'
+//   : path.join('etc', 'secrets', 'robotics-club-door-lock-592445d6ec57.json');
+
 const keyPath = isRender
-  ? '/etc/secrets/robotics-club-door-lock-592445d6ec57.json'
-  : path.join('etc', 'secrets', 'robotics-club-door-lock-592445d6ec57.json');
+  ? '/etc/secrets/robotics-club-door-lock-592445d6ec57.json' // Render's expected path
+  : path.join('/tmp', 'robotics-club-door-lock-592445d6ec57.json'); // ✅ Writable on Vercel
 
 if (!fs.existsSync(keyPath)) {
   const keyJson = Buffer.from(process.env.GOOGLE_KEY_JSON, "base64").toString("utf-8");
