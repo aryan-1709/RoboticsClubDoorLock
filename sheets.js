@@ -12,9 +12,6 @@ if (!fs.existsSync(keyPath)) {
   const keyJson = Buffer.from(process.env.GOOGLE_KEY_JSON, "base64").toString("utf-8");
   fs.writeFileSync(keyPath, keyJson);
 }
-else{
-    console.log("Key file exists");
-}
 const auth = new google.auth.GoogleAuth({
     keyFile: keyPath,
     scopes: ['https://www.googleapis.com/auth/spreadsheets'],
