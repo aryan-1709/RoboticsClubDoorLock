@@ -26,7 +26,7 @@ const transporter = nodemailer.createTransport({
 
 app.post('/verifyAdmin', async (req, res) => {
     const {to} = req.body;
-    const admins = getAllValFromColumn(Number(process.env.ADMIN_COL));
+    const admins = await getAllValFromColumn(Number(process.env.ADMIN_COL));
     if (!to) {
         return res.status(400).send('Missing required fields: {to}');
     }
@@ -89,7 +89,7 @@ app.post('/update', async (req, res) => {
     }
     try {
         const currentPassword = await getAllValFromColumn(Number(process.env.MEMBER_PASSWORD_COL));
-        console.log('Current password fetched successfully:', currentPassword);
+        // console.log('Current password fetched successfully:', currentPassword);
         res.status(200).send(currentPassword.join(','));
     } catch (error) {
         console.error('Error fetching current password:', error);
