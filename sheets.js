@@ -29,9 +29,9 @@ const SHEET_NAME = 'PasswordResetListRoboticsClub';
 const client = await auth.getClient();
 const sheets = google.sheets({ version: 'v4', auth: client });
 
-async function appendEmailToSheet(email) {
+async function appendEmailToSheet(regNo) {
     const now = new Date().toISOString();
-    const values = [[email, now]];
+    const values = [[regNo, now]];
 
     try {
         const response = await sheets.spreadsheets.values.append({
@@ -42,7 +42,7 @@ async function appendEmailToSheet(email) {
                 values,
             },
         });
-        console.log('Email logged to Google Sheets.');
+        // console.log('Email logged to Google Sheets.');
     } catch (err) {
         console.error('Failed to log to Google Sheets:', err);
         throw err;
@@ -78,7 +78,7 @@ async function changeValueSheet(row, col, newValue) {
                 values: [[newValue]],
             },
         });
-        console.log('Value updated successfully in Google Sheets.');
+        // console.log('Value updated successfully in Google Sheets.');
     } catch (err) {
         console.error('Failed to update Google Sheets:', err);
         throw err;
@@ -95,14 +95,14 @@ async function getAllValFromColumn(col) {
         const rows = response.data.values;
 
         if (!rows || rows.length === 0) {
-            console.log('No emails found in column D.');
+            // console.log('No emails found in column D.');
             return [];
         }
         // handle missing values and flatten
         const data = rows.map(row => row[0] ? row[0] : '');
         return data;
     } catch (err) {
-        console.error('Failed to retrieve emails from Google Sheets:', err);
+        // console.error('Failed to retrieve emails from Google Sheets:', err);
         throw err;
     }
 }

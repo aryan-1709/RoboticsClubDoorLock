@@ -54,23 +54,12 @@ app.post('/verifyAdmin', async (req, res) => {
     }
 });
 
-app.post('/reset', async (req, res) => {
-    const {user} = req.body;
-    const password = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
-    const subject = "Password Reset Robotics Club Door";
-    const text = `New password for robotics club door is : ${password}`;
-    const mailOptions = {
-        from: `"Admin Robotics Club" <${process.env.EMAIL_USER}>`, 
-        to: process.env.EMAIL_USER,              
-        subject: subject,     
-        text: text
-    };
+app.post('/enter', async (req, res) => {
+    const {regNo} = req.body;
     try {
-        await transporter.sendMail(mailOptions);
-
-        await appendEmailToSheet(user);
+        await appendEmailToSheet(regNo);
         // console.log('Email sent and logged!');
-        res.status(200).send(password);
+        res.status(200).send("User Entered");
     } catch (error) {
         console.error('Error:', error);
         res.status(500).send('Error sending email or logging to sheet.');
@@ -101,9 +90,6 @@ const changePassword = async () => {
     try {
         const emails = await getAllValFromColumn(Number(process.env.MEMBER_EMAIL_COL)); 
         const regNos = await getAllValFromColumn(Number(process.env.MEMBER_REG_NO_COL)); 
-
-        // console.log('Emails:', emails);
-        // console.log('Reg Nos:', regNos);
 
         if (!emails || !regNos || emails.length !== regNos.length) {
             console.error('Mismatch or missing data in email/reg no columns.');
