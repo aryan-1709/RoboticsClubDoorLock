@@ -1,11 +1,17 @@
-require('dotenv').config(); 
-const express = require('express');
-const nodemailer = require('nodemailer');
-const cors = require('cors');
-const { appendEmailToSheet, getValueSheet, changeValueSheet } = require('./sheets');
+import dotenv from 'dotenv';
+import express from 'express';
+import nodemailer from 'nodemailer';
+import cors from 'cors';
+import schedule from 'node-schedule';
+import sheets from './sheets.js';
+const { appendEmailToSheet, getValueSheet, changeValueSheet, getAllValFromColumn } = sheets;
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+let currAdminPass = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
 
 app.use(cors());
 app.use(express.json());
@@ -18,36 +24,18 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-app.post('/send', async (req, res) => {
-    console.log(req.body);
-    const { to, subject, text } = req.body;
-
-    if (!to || !subject || !text) {
-        return res.status(400).send('Missing required fields: to, subject, text');
-    }
-    const mailOptions = {
-        from: `"Your App Name" <${process.env.EMAIL_USER}>`,
-        to: to,              
-        subject: subject,    
-        text: text            
-    };
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully!');
-        res.status(200).send('Email sent successfully!');
-    } catch (error) {
-        console.error('Error sending email:', error);
-        res.status(500).send('Error sending email.');
-    }
-});
-
-app.post('/verify', async (req, res) => {
+app.post('/verifyAdmin', async (req, res) => {
     const {to} = req.body;
+    const admins = getAllValFromColumn(Number(process.env.ADMIN_COL));
     if (!to) {
         return res.status(400).send('Missing required fields: {to}');
     }
+    else if(admins.find(admin => admin === to)===undefined){
+        return res.status(400).send('You are not an admin');
+    }
     const subject = "Email Verification - Admin Robotics Club";
     const code = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
+    currAdminPass = code;
     const text = `The verification code for your email is: ${code}.\n\nIf you did not request this code, please ignore this email.`;
     const mailOptions = {
         from: `"Admin Robotics Club" <${process.env.EMAIL_USER}>`,
@@ -58,7 +46,7 @@ app.post('/verify', async (req, res) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log('Verification code sent successfully!');
+        // console.log('Verification code sent successfully!');
         res.status(200).send(code);
     } catch (error) {
         console.error('Error sending email:', error);
@@ -81,7 +69,7 @@ app.post('/reset', async (req, res) => {
         await transporter.sendMail(mailOptions);
 
         await appendEmailToSheet(user);
-        console.log('Email sent and logged!');
+        // console.log('Email sent and logged!');
         res.status(200).send(password);
     } catch (error) {
         console.error('Error:', error);
@@ -97,31 +85,86 @@ app.post('/update', async (req, res) => {
     const { adminPass } = req.body;
     const CurrentAdminPass=await getValueSheet(1,2);
     if (adminPass != CurrentAdminPass) {
-        return res.status(400).send('Wrong');
+        return res.status(400).send('Wrong Admin Password');
     }
     try {
-        const currentPassword = await getValueSheet(0,2);
+        const currentPassword = await getAllValFromColumn(Number(process.env.MEMBER_PASSWORD_COL));
         console.log('Current password fetched successfully:', currentPassword);
-        res.status(200).send(currentPassword);
+        res.status(200).send(currentPassword.join(','));
     } catch (error) {
         console.error('Error fetching current password:', error);
         res.status(500).send('Error fetching current password.');
     }
 });
 
-app.post('/changepassword', async (req, res) => {
-    const {newPassword} = req.body;
-    if (!newPassword) {
-        return res.status(400).send('Missing required fields: {newPassword}');
-    }
+const changePassword = async () => {
     try {
-        await changeValueSheet(0, 2, newPassword);
-        console.log('Password updated successfully');
-        res.status(200).send('Password updated successfully');
-    } catch (error) {
-        console.error('Error updating password:', error);
-        res.status(500).send('Error updating password.');
+        const emails = await getAllValFromColumn(Number(process.env.MEMBER_EMAIL_COL)); 
+        const regNos = await getAllValFromColumn(Number(process.env.MEMBER_REG_NO_COL)); 
+
+        // console.log('Emails:', emails);
+        // console.log('Reg Nos:', regNos);
+
+        if (!emails || !regNos || emails.length !== regNos.length) {
+            console.error('Mismatch or missing data in email/reg no columns.');
+            return;
+        }
+
+        for (let i = 0; i < emails.length; i++) {
+            const email = emails[i];
+            const regNo = regNos[i];
+
+            if (!email || !regNo) continue;
+
+            const regStr = String(regNo);
+            const last4 = regStr.slice(-4);
+            const rand4 = Math.floor(1000 + Math.random() * 9000);
+            const password = `${last4}${rand4}`;
+
+            // Send the email
+            const mailOptions = {
+                from: `"LockWise" <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject: 'Your Robotics Club Password',
+                text: `Hello,\n\nYour new password is: ${password}\n\nPlease keep it safe.\n\n- Robotics Club`
+            };
+
+            try {
+                await transporter.sendMail(mailOptions);
+                // console.log(`Email sent to ${email}`);
+                await changeValueSheet(i, 5, password);
+                // console.log(`Password updated in sheet for ${email}`);
+            } catch (err) {
+                console.error(`Failed to send/update for ${email}:`, err);
+            }
+        }
+    } catch (err) {
+        console.error('Scheduler failed:', err);
     }
+};
+
+app.post('/changepassword', async (req, res) => {
+    const { adminPass } = req.body;
+    if (currAdminPass !== adminPass) {
+        return res.status(400).send("Wrong password"); 
+    }
+    currAdminPass = (Math.floor(Math.random() * 1000000)).toString().padStart(6, '0');
+    try {
+        await changePassword();
+        res.status(200).send("Password changed successfully");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Error changing password");
+    }
+});
+//================================================================================//
+// const job = schedule.scheduleJob('59 59 23 * * *', async function(){
+//   const data = await getAllValFromColumn(3);
+//   console.log(data);
+// });
+
+const job = schedule.scheduleJob('59 59 23 * * *', async function () {
+    await changePassword();
 });
 
 app.listen(PORT, () => {

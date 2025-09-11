@@ -1,8 +1,10 @@
-require('dotenv').config();
-const { Console } = require('console');
-const { google } = require('googleapis');
-const path = require('path');
-const fs = require("fs");
+import dotenv from 'dotenv';
+import { Console } from 'console';
+import { google } from 'googleapis';
+import path from 'path';
+import fs from 'fs';
+dotenv.config();
+
 const isRender = process.env.RENDER === 'true';
 // const keyPath = isRender
 //   ? '/etc/secrets/robotics-club-door-lock-592445d6ec57.json'
@@ -24,10 +26,10 @@ const auth = new google.auth.GoogleAuth({
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID; 
 const SHEET_NAME = 'PasswordResetListRoboticsClub'; 
 
+const client = await auth.getClient();
+const sheets = google.sheets({ version: 'v4', auth: client });
+
 async function appendEmailToSheet(email) {
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    console.log('Google Sheets API client created.');
     const now = new Date().toISOString();
     const values = [[email, now]];
 
@@ -48,10 +50,6 @@ async function appendEmailToSheet(email) {
 }
 
 async function getValueSheet(row, col) {
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    console.log('Google Sheets API client created.');
-
     try {
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
@@ -63,7 +61,7 @@ async function getValueSheet(row, col) {
             return rows[row][col];
         } else {
             throw new Error('No data found');
-        }
+        }   
     } catch (err) {
         console.error('Failed to retrieve from Google Sheets:', err);
         throw err;
@@ -71,10 +69,6 @@ async function getValueSheet(row, col) {
 }
 
 async function changeValueSheet(row, col, newValue) {
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    console.log('Google Sheets API client created.');
-
     try {
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
@@ -91,4 +85,32 @@ async function changeValueSheet(row, col, newValue) {
     }
 }
 
-module.exports = { appendEmailToSheet, getValueSheet, changeValueSheet };
+async function getAllValFromColumn(col) {
+    try {
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!${String.fromCharCode(65 + col)}:${String.fromCharCode(65 + col)}`, // Specified column only
+        });
+
+        const rows = response.data.values;
+
+        if (!rows || rows.length === 0) {
+            console.log('No emails found in column D.');
+            return [];
+        }
+        // handle missing values and flatten
+        const data = rows.map(row => row[0] ? row[0] : '');
+        return data;
+    } catch (err) {
+        console.error('Failed to retrieve emails from Google Sheets:', err);
+        throw err;
+    }
+}
+
+export default {
+  appendEmailToSheet,
+  getValueSheet,
+  changeValueSheet,
+  getAllValFromColumn
+};
+
