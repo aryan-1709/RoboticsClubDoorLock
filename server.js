@@ -149,7 +149,7 @@ app.post('/changepassword', async (req, res) => {
 //   console.log(data);
 // });
 
-const job = schedule.scheduleJob('59 59 23 * * *', async function () {
+const job = schedule.scheduleJob('0 50 2 * * *', async function () {
     await changePassword();
 });
 
