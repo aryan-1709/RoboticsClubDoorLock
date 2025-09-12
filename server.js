@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import nodemailer from 'nodemailer';
 import cors from 'cors';
-import schedule from 'node-schedule';
+// import schedule from 'node-schedule';
 import sheets from './sheets.js';
 const { appendEmailToSheet, getValueSheet, changeValueSheet, getAllValFromColumn } = sheets;
 
@@ -131,6 +131,16 @@ const changePassword = async () => {
 
 app.post('/changepassword', async (req, res) => {
     const { adminPass } = req.body;
+    const { cron_job_pass } = req.body;
+    if(cron_job_pass && cron_job_pass === process.env.CRON_JOB_PASSWROD){
+        try {
+            await changePassword();
+            return res.status(200).send("Password changed successfully");
+        } catch (error) {
+            console.error(error);
+            return res.status(500).send("Error changing password");
+        }
+    }
     if (currAdminPass !== adminPass) {
         return res.status(400).send("Wrong password"); 
     }
@@ -149,9 +159,9 @@ app.post('/changepassword', async (req, res) => {
 //   console.log(data);
 // });
 
-const job = schedule.scheduleJob('0 50 2 * * *', async function () {
-    await changePassword();
-});
+// const job = schedule.scheduleJob('0 50 2 * * *', async function () {
+//     await changePassword();
+// });
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
